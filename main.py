@@ -1,0 +1,114 @@
+import requests, random, threading, time, datetime, os
+
+
+class Checker:
+    def __init__(self, threads, length, webhook) -> None:
+        self.threads = (threads,)
+        self.length = length
+        self.hook = webhook
+        self.start = time.time()
+        self.proxies      = open('proxies.txt', 'r').read().splitlines()
+
+        self.hits = 0
+        self.fails = 0
+
+    def username(self) -> str:
+        """Returns generated legit username"""
+        l2 = "".join(random.choices("mnbvcxzasdfghjklqowiertuy0192837465_-.", k=self.length))
+        
+        username = f"{l2}"
+
+        return username
+
+    def webhook(self, username) -> None:
+        """_summary_
+
+        Args:
+            username (_type_): _description_
+        """
+        data = {
+            "content": "@here",
+            "embeds": [
+                {
+                    "title": "CLAIMABLE",
+                    "description": f"*Precision* : **{random.randint(98, 99)}%**\n*Username* : **{username}**\n*Date & Time* : **{str(datetime.datetime.now()).split('.')[0]}**\n",
+                    "color": 5242880,
+                    "image": {
+                        "url": "https://cdn.discordapp.com/attachments/988228169117106236/991900970105712781/standard.gif"
+                    },
+                    "thumbnail": {
+                        "url": "https://cdn.discordapp.com/attachments/988228169117106236/991902513391489024/final_size-snap_20210321235118_2.gif"
+                    },
+                }
+            ],
+            "attachments": [],
+        }
+
+        requests.post(url=self.hook, json=data)
+
+    def worker(self) -> None:
+        """
+        Worker loop
+        """
+
+        while True:
+            try:
+                username = self.username()
+                proxy = random.choice(self.proxies)
+
+                req = requests.post(
+                    url="https://app.snapchat.com/loq/suggest_username_v3",
+                    headers={
+                        "User-Agent": "Snapchat/10.25.0.0 (Agile_Client_Error; Android 5.1.1#500181103#22; gzip)"
+                    },
+                    data={
+                        "requested_username": username,
+                        "x-niggers": "RE8gTk9UIERFQ09ERSA6IFpHbHpZMjl5WkM1blp5OXZibXh3SURzZ0tRPT0=",
+                    },
+                    proxies={"http": f"http://{proxy}", "https": f"http://{proxy}"},
+                )
+                print(req.text)
+                if "429 Too Many Requests" in req.text:
+                    time.sleep(20)
+                    continue
+                elif "OK" in req.text:
+                    self.hits += 1
+                    with open("usernames.txt", "a") as _:
+                        _.write(f'{username}\n')
+                    self.webhook(f'{username}')
+                    continue
+                else:
+                    self.fails += 1
+            except:
+                continue
+
+    def title(self) -> None:
+        """_summary_
+        Title loop threaded for stats
+        """
+        while True:
+            speed = round((self.hits + self.fails) / (time.time() - self.start), 1)
+            curr_time = str(
+                datetime.timedelta(seconds=(time.time() - self.start))
+            ).split(".")[0]
+
+            os.system(
+                f"title [Snapchat Checker] ^| Hits: {self.hits} ^| Fails: {self.fails} ^| Speed: {speed}/s ^| Elapsed: {curr_time}"
+            )
+            time.sleep(0.2)
+
+    def main_thread(self):
+        # threading.Thread(target=self.title).start()
+
+        while True:
+            if threading.active_count() < int(self.threads[0]) + 1:
+                threading.Thread(target=self.worker).start()
+
+
+if __name__ == "__main__":
+    check = Checker(
+        threads=1000,
+        length=3,  # username length
+        webhook="",
+    )
+    check.main_thread()
